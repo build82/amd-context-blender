@@ -1,51 +1,32 @@
-(function(){
-
-var defaultOffsets = {
-	destX   : 0,
-	destY   : 0,
-	sourceX : 0,
-	sourceY : 0,
-	width   : 'auto',
-	height  : 'auto'
-};
-
-if (typeof require==='function' && typeof module==='object'){
-	var canvas = require('canvas');
-	addBlendMethod(canvas.Context2d.prototype);
-	module.exports = canvas;
-} else addBlendMethod(this.CanvasRenderingContext2D && this.CanvasRenderingContext2D.prototype);
-
-function addBlendMethod(object){
-	if (!object || typeof object.getImageData!=='function') return console.error("context blender called without a valid context prototype");
-	Object.defineProperty(object,'blendOnto',{value:blendOnto});
-
-	// For querying of functionality from other libraries
-	var modes = blendOnto.supportedBlendModes = 'normal src-over screen multiply difference src-in plus add overlay hardlight colordodge dodge colorburn burn darken darker lighten lighter exclusion softlight luminosity color hue saturation lightercolor darkercolor'.split(' ');
-	var supports = blendOnto.supports = {};
-	for (var i=modes.length;i--;) supports[modes[i]] = true;
-	blendOnto.aliases = { "src-over":"normal", plus:"add", dodge:"colordodge", burn:"colorburn", darker:"darken", lighter:"lighten" };
-	return object;
-}
-
-function blendOnto(destContext,blendMode,offsetOptions){
+define('build82/context_blender', function() {
+	var defaultOffsets = {
+		destX   : 0,
+		destY   : 0,
+		sourceX : 0,
+		sourceY : 0,
+		width   : 'auto',
+		height  : 'auto'
+	},
+	
+	blendOnto = function(srcContext, destContext,blendMode,offsetOptions) {
 		var offsets={};
 		for (var key in defaultOffsets){
 			if (defaultOffsets.hasOwnProperty(key)){
 				offsets[key] = (offsetOptions && offsetOptions[key]) || defaultOffsets[key];
 			}
 		}
-		if (offsets.width =='auto') offsets.width =this.canvas.width;
-		if (offsets.height=='auto') offsets.height=this.canvas.height;
-		offsets.width  = Math.min(offsets.width, this.canvas.width-offsets.sourceX, destContext.canvas.width-offsets.destX );
-		offsets.height = Math.min(offsets.height,this.canvas.height-offsets.sourceY,destContext.canvas.height-offsets.destY);
+		if (offsets.width =='auto') offsets.width =srcContext.canvas.width;
+		if (offsets.height=='auto') offsets.height=srcContext.canvas.height;
+		offsets.width  = Math.min(offsets.width, srcContext.canvas.width-offsets.sourceX, destContext.canvas.width-offsets.destX );
+		offsets.height = Math.min(offsets.height,srcContext.canvas.height-offsets.sourceY,destContext.canvas.height-offsets.destY);
 
-		var srcD = this.getImageData(offsets.sourceX,offsets.sourceY,offsets.width,offsets.height);
+		var srcD = srcContext.getImageData(offsets.sourceX,offsets.sourceY,offsets.width,offsets.height);
 		var dstD = destContext.getImageData(offsets.destX,offsets.destY,offsets.width,offsets.height);
 		var src  = srcD.data;
 		var dst  = dstD.data;
 		var sA, dA, len=dst.length;
 		var sRA, sGA, sBA, dRA, dGA, dBA, dA2,
-		    r1,g1,b1, r2,g2,b2;
+			r1,g1,b1, r2,g2,b2;
 		var demultiply;
 
 		function Fsoftlight(a,b) {
@@ -102,13 +83,13 @@ function blendOnto(destContext,blendMode,offsetOptions){
 		function rgb2hsv(r,g,b) {
 			var c=rgb2YCbCr(r,g,b);
 			var s=Math.sqrt(c.g*c.g+c.b*c.b),
-			    h=Math.atan2(c.g,c.b);
+				h=Math.atan2(c.g,c.b);
 			return {h:h, s:s, v:c.r };
 		}
 
 		function hsv2rgb(h,s,v) {
 			var g=s*Math.sin(h),
-			    b=s*Math.cos(h);
+				b=s*Math.cos(h);
 			return YCbCr2rgb(v,g,b);
 		}
 
@@ -137,6 +118,7 @@ function blendOnto(destContext,blendMode,offsetOptions){
 				// ******* Very close match to Photoshop
 				case 'normal':
 				case 'src-over':
+				case 'source-over':
 					dst[px  ] = (sRA + dRA - dRA*sA) * demultiply;
 					dst[px+1] = (sGA + dGA - dGA*sA) * demultiply;
 					dst[px+2] = (sBA + dBA - dBA*sA) * demultiply;
@@ -162,6 +144,7 @@ function blendOnto(destContext,blendMode,offsetOptions){
 
 				// ******* Slightly different from Photoshop, where alpha is concerned
 				case 'src-in':
+				case 'source-in':
 					dA2 = sA*dA;
 					demultiply = 255 / dA2;
 					dst[px  ] = sRA*dA * demultiply;
@@ -184,7 +167,8 @@ function blendOnto(destContext,blendMode,offsetOptions){
 					dst[px+2] = f1*Foverlay(b1,b2) + f2*b1 + f3*b2;
 				break;
 
-				case 'hardlight': // hardlight(a,b) = overlay(b,a)
+				case 'hardlight': // hardlight(a,b) = overlay(b,a
+				case 'hard-light':
 					dst[px]   = f1*Foverlay(r2,r1) + f2*r1 + f3*r2;
 					dst[px+1] = f1*Foverlay(g2,g1) + f2*g1 + f3*g2;
 					dst[px+2] = f1*Foverlay(b2,b1) + f2*b1 + f3*b2;
@@ -192,6 +176,7 @@ function blendOnto(destContext,blendMode,offsetOptions){
 
 				case 'colordodge':
 				case 'dodge':
+				case 'color-dodge':
 					dst[px]   = f1*Fdodge(r1,r2) + f2*r1 + f3*r2;
 					dst[px+1] = f1*Fdodge(g1,g2) + f2*g1 + f3*g2;
 					dst[px+2] = f1*Fdodge(b1,b2) + f2*b1 + f3*b2;
@@ -199,6 +184,7 @@ function blendOnto(destContext,blendMode,offsetOptions){
 
 				case 'colorburn':
 				case 'burn':
+				case 'color-burn':
 					dst[px]   = f1*Fburn(r1,r2) + f2*r1 + f3*r2;
 					dst[px+1] = f1*Fburn(g1,g2) + f2*g1 + f3*g2;
 					dst[px+2] = f1*Fburn(b1,b2) + f2*b1 + f3*b2;
@@ -225,6 +211,7 @@ function blendOnto(destContext,blendMode,offsetOptions){
 				break;
 
 				case 'softlight':
+				case 'soft-light':
 					dst[px]   = f1*Fsoftlight(r1,r2) + f2*r1 + f3*r2;
 					dst[px+1] = f1*Fsoftlight(g1,g2) + f2*g1 + f3*g2;
 					dst[px+2] = f1*Fsoftlight(b1,b2) + f2*b1 + f3*b2;
@@ -281,15 +268,18 @@ function blendOnto(destContext,blendMode,offsetOptions){
 				break;
 
 				default: // ******* UNSUPPORTED mode, produces yellow/magenta checkerboard
-					var col = (px/4) % this.canvas.width,
-					    row = Math.floor((px/4) / this.canvas.width),
-					    odd = (col%8<4 && row%8<4) || (col%8>3 && row%8>3);
+					var col = (px/4) % srcContext.canvas.width,
+						row = Math.floor((px/4) / srcContext.canvas.width),
+						odd = (col%8<4 && row%8<4) || (col%8>3 && row%8>3);
 					dst[px] = dst[px+3] = 255;
 					dst[px+1] = odd ? 255 : 0;
 					dst[px+2] = odd ? 0 : 255;
 			}
 		}
 		destContext.putImageData(dstD,offsets.destX,offsets.destY);
-}
-
-})();
+	};
+		
+	return {
+		blend: blendOnto
+	};
+});

@@ -4,7 +4,7 @@ Adobe® Photoshop® has a variety of helpful [blend modes](http://helpx.adobe.co
 
 ## Syntax
 
-    overContext.blendOnto( underContext, blendMode, offsetOptions );
+    blend(overContext, underContext, blendMode, offsetOptions );
       - overContext   : A CanvasRenderingContext2D
       - underContext  : A CanvasRenderingContext2D
       - blendMode     : A string with the blend mode to use, e.g. 'screen'
@@ -25,53 +25,45 @@ Adobe® Photoshop® has a variety of helpful [blend modes](http://helpx.adobe.co
 
 ## Use
 
-### In Node.js
+include the module :
+```html
+<script>
+	require(['build82/context_blender'], function(blender) {
+		...
+	});
+</script>
+```
 
-1. Install the node module
+example :
+```html
+<script>
+	require(['build82/context_blender', 'dojo/dom', 'dojo/domReady!'], function(dom, blender) {
+		// a canvas that is shown on the page
+		var under = dom.byId('canvas-id-2').getContext('2d');
 
-        npm install context-blender
+		// an 'offscreen' (not in the DOM) canvas
+		var over_cvs = document.createElement('canvas');
+		over_cvs.width  = under.canvas.width;
+		over_cvs.height = under.canvas.height;
+		var over = over_cvs.getContext('2d');
 
-   This will also install node-canvas, which requires a working Cairo install.
-   See https://github.com/Automattic/node-canvas#installation for more details.
+		// Blend all of 'over' onto 'under', starting at the upper left corner
+		blender.blend(over, under, 'screen');
 
-2. Use the library like so in the scripts:
+		// Blend all of 'over' onto 'under' (again), starting at 17,42 in 'under'
+		blender.blend(over, under, 'multiply', {destX:17,destY:42});
 
-    ```javascript
-    // Requires the canvas library and augments it for you
-    var Canvas = require('context-blender');
-
-    var over  = new Canvas(100,100).getContext('2d');
-    var under = new Canvas(100,100).getContext('2d');
-
-    // …drawing something to both canvas contexts, and then:
-
-    // Blend all of 'over' onto 'under', starting at the upper left corner
-    over.blendOnto(under,'screen');
-
-    // Blend all of 'over' onto 'under' (again), starting at 17,42 in 'under'
-    over.blendOnto(under,'multiply',{destX:17,destY:42});
-
-    // Blend a 16x16 tile from 'over' onto 'under' (again), starting at 17,42 in 'under'
-    over.blendOnto(under,'add',{destX:17,destY:42,sourceX:32,sourceY:128,width:16,height:16});
-    ```
-
-### In a Web Browser
-
-```javascript
-// Likely an 'offscreen' (not in the DOM) canvas
-var over = someCanvas.getContext('2d');
-
-// Usually a canvas that is shown on the page
-var under = anotherCanvas.getContext('2d');
-
-// Blend all of 'over' onto 'under', starting at the upper left corner
-over.blendOnto(under,'screen');
-
-// Blend all of 'over' onto 'under' (again), starting at 17,42 in 'under'
-over.blendOnto(under,'multiply',{destX:17,destY:42});
-
-// Blend a 16x16 tile from 'over' onto 'under' (again), starting at 17,42 in 'under'
-over.blendOnto(under,'add',{destX:17,destY:42,sourceX:32,sourceY:128,width:16,height:16});
+		// Blend a 16x16 tile from 'over' onto 'under' (again), starting at 17,42 in 'under'
+		blender.blend(over, under, 'add', {
+			destX: 17,
+			destY: 42,
+			sourceX: 32,
+			sourceY: 128,
+			width: 16,
+			height: 16
+		});
+	});
+</script>
 ```
 
 
@@ -79,8 +71,8 @@ over.blendOnto(under,'add',{destX:17,destY:42,sourceX:32,sourceY:128,width:16,he
 
 The following blend modes work perfectly (or as nearly as the [vagaries of the HTML Canvas](http://stackoverflow.com/questions/4309364/why-does-html-canvas-getimagedata-not-return-the-exact-same-values-that-were-ju) allow):
 
- * `normal` (or `src-over`)
- * `src-in`
+ * `normal` (or `source-over`)
+ * `source-in`
  * `screen`
  * `multiply`
  * `difference`
@@ -104,13 +96,13 @@ over top of
    <table><thead><tr><th>Photoshop</th><th>context-blender</th></tr></thead><tbody><tr><td>![](test/darken-ideal.png)</td><td>![](test/darken-actual.png)</td></tr></tbody></table>
  * `overlay` - this is correct where both the over and under images are 100% opaque; the lower the alpha of either/both images, the more the colors become too desaturated.
    <table><thead><tr><th>Photoshop</th><th>context-blender</th></tr></thead><tbody><tr><td>![](test/overlay-ideal.png)</td><td>![](test/overlay-actual.png)</td></tr></tbody></table>
- * `hardlight` - this is the opposite of "overlay" and experiences similar problems where either image is not fully opaque.
+ * `hard-light` - this is the opposite of "overlay" and experiences similar problems where either image is not fully opaque.
    <table><thead><tr><th>Photoshop</th><th>context-blender</th></tr></thead><tbody><tr><td>![](test/hardlight-ideal.png)</td><td>![](test/hardlight-actual.png)</td></tr></tbody></table>
- * `colordodge` (or `dodge`) - works correctly only under 100% opacity
+ * `color-dodge` (or `dodge`) - works correctly only under 100% opacity
    <table><thead><tr><th>Photoshop</th><th>context-blender</th></tr></thead><tbody><tr><td>![](test/colordodge-ideal.png)</td><td>![](test/colordodge-actual.png)</td></tr></tbody></table>
- * `colorburn` (or `burn`) - works correctly only under 100% opacity
+ * `color-burn` (or `burn`) - works correctly only under 100% opacity
    <table><thead><tr><th>Photoshop</th><th>context-blender</th></tr></thead><tbody><tr><td>![](test/colorburn-ideal.png)</td><td>![](test/colorburn-actual.png)</td></tr></tbody></table>
- * `softlight`
+ * `soft-light`
    <table><thead><tr><th>Photoshop</th><th>context-blender</th></tr></thead><tbody><tr><td>![](test/softlight-ideal.png)</td><td>![](test/softlight-actual.png)</td></tr></tbody></table>
  * `luminosity`
    <table><thead><tr><th>Photoshop</th><th>context-blender</th></tr></thead><tbody><tr><td>![](test/luminosity-ideal.png)</td><td>![](test/luminosity-actual.png)</td></tr></tbody></table>
